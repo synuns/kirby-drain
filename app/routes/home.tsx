@@ -1,13 +1,16 @@
 import type { Route } from "./+types/home";
-import { Welcome } from "../welcome/welcome";
+import { ModelViewer } from "../components/ModelViewer";
 
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: "New React Router App" },
-    { name: "description", content: "Welcome to React Router!" },
+    { title: "Kirby Drain - 3D Model Viewer" },
+    {
+      name: "description",
+      content: "3D Kirby Drain model viewer using Three.js",
+    },
   ];
 }
 
 export default function Home() {
-  return <Welcome />;
+  return <ModelViewer modelPath="/assets/models/kirby-drain.glb" />;
 }
