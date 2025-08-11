@@ -3,19 +3,35 @@ import type { Group } from "three";
 import { useFrame } from "@react-three/fiber";
 
 type UseJumpOptions = {
-  height?: number; // 점프 최대 높이
+  baseHeight?: number; // 기준 점프 높이
   upMs?: number; // 상승 시간(ms)
   downMs?: number; // 하강 시간(ms)
   recoverMs?: number; // 착지 후 복귀(ms)
   cooldownMs?: number; // 재입력 쿨다운(ms)
+  // 길게 누를수록 높아지되 로그로 포화
+  chargeKMs?: number; // 로그 스케일 기준(ms)
+  maxChargeMs?: number; // 최대 차지 시간(ms)
+  minFactor?: number; // 최소 배수
+  maxFactor?: number; // 최대 배수
+  // 차지 중 시각 피드백(점점 쪼그라듦)
+  chargeSquashYMax?: number; // y축 최대 압축 비율(예: 0.15 → 15% 줄어듦)
+  chargeStretchXZMax?: number; // xz축 최대 신장 비율(예: 0.08 → 8% 늘어남)
+  chargeScaleLerp?: number; // 차지 스케일 보간 정도(0~1)
 };
 
 const DEFAULTS: Required<UseJumpOptions> = {
-  height: 1.2,
+  baseHeight: 1.8,
   upMs: 300,
   downMs: 300,
   recoverMs: 150,
   cooldownMs: 600,
+  chargeKMs: 120,
+  maxChargeMs: 1200,
+  minFactor: 0.5,
+  maxFactor: 2.3,
+  chargeSquashYMax: 0.3,
+  chargeStretchXZMax: 0.14,
+  chargeScaleLerp: 0.28,
 };
 
 function easeOutQuad(t: number) {
@@ -35,10 +51,14 @@ export function useJump(
     phase: "idle" | "up" | "down" | "recover";
     start: number;
     cooldownUntil: number;
+    height: number;
+    pressStartedAt: number | null;
   }>({
     phase: "idle",
     start: 0,
     cooldownUntil: 0,
+    height: cfg.baseHeight,
+    pressStartedAt: null,
   });
   const baseScale = useRef({ x: 1, y: 1, z: 1 });
   const baseY = useRef(0);
@@ -54,32 +74,104 @@ export function useJump(
   }, [cfg.cooldownMs]);
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.code === "Space") trigger();
+    const startPress = () => {
+      if (state.current.pressStartedAt == null) {
+        state.current.pressStartedAt = performance.now();
+      }
     };
-    const onClick = () => trigger();
-    window.addEventListener("keydown", onKey);
-    window.addEventListener("click", onClick);
+    const endPress = () => {
+      const now = performance.now();
+      if (state.current.pressStartedAt == null) return;
+      const heldMs = Math.min(
+        cfg.maxChargeMs,
+        now - state.current.pressStartedAt
+      );
+      state.current.pressStartedAt = null;
+      // 로그 기반 맵핑: u in [0,1]
+      const denom = Math.log1p(cfg.maxChargeMs / cfg.chargeKMs);
+      const u = denom > 0 ? Math.log1p(heldMs / cfg.chargeKMs) / denom : 0;
+      const clampedU = Math.max(0, Math.min(1, u));
+      const factor = cfg.minFactor + (cfg.maxFactor - cfg.minFactor) * clampedU;
+      state.current.height = cfg.baseHeight * factor;
+      trigger();
+    };
+
+    let spaceHeld = false;
+    const onPointerDown = () => startPress();
+    const onPointerUp = () => endPress();
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.code !== "Space") return;
+      if (spaceHeld) return;
+      spaceHeld = true;
+      startPress();
+    };
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.code !== "Space") return;
+      spaceHeld = false;
+      endPress();
+    };
+    window.addEventListener("pointerdown", onPointerDown);
+    window.addEventListener("pointerup", onPointerUp);
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
     return () => {
-      window.removeEventListener("keydown", onKey);
-      window.removeEventListener("click", onClick);
+      window.removeEventListener("pointerdown", onPointerDown);
+      window.removeEventListener("pointerup", onPointerUp);
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
     };
-  }, [trigger]);
+  }, [
+    trigger,
+    cfg.baseHeight,
+    cfg.chargeKMs,
+    cfg.maxChargeMs,
+    cfg.minFactor,
+    cfg.maxFactor,
+  ]);
 
   useFrame(() => {
     const ref = groupRef.current;
     if (!ref) return;
     const now = performance.now();
     if (state.current.phase === "idle") {
-      baseScale.current = { x: ref.scale.x, y: ref.scale.y, z: ref.scale.z };
+      const charging = state.current.pressStartedAt != null;
+      if (!charging) {
+        baseScale.current = { x: ref.scale.x, y: ref.scale.y, z: ref.scale.z };
+      }
       baseY.current = ref.position.y;
+
+      if (charging) {
+        const heldMs = Math.min(
+          cfg.maxChargeMs,
+          now - (state.current.pressStartedAt as number)
+        );
+        const denom = Math.log1p(cfg.maxChargeMs / cfg.chargeKMs);
+        const u = denom > 0 ? Math.log1p(heldMs / cfg.chargeKMs) / denom : 0;
+        const clampedU = Math.max(0, Math.min(1, u));
+        const yTarget =
+          baseScale.current.y * (1 - cfg.chargeSquashYMax * clampedU);
+        const xzFactor = 1 + cfg.chargeStretchXZMax * clampedU;
+        const xTarget = baseScale.current.x * xzFactor;
+        const zTarget = baseScale.current.z * xzFactor;
+
+        ref.scale.y += (yTarget - ref.scale.y) * cfg.chargeScaleLerp;
+        ref.scale.x += (xTarget - ref.scale.x) * cfg.chargeScaleLerp;
+        ref.scale.z += (zTarget - ref.scale.z) * cfg.chargeScaleLerp;
+      } else {
+        ref.scale.x +=
+          (baseScale.current.x - ref.scale.x) * cfg.chargeScaleLerp;
+        ref.scale.y +=
+          (baseScale.current.y - ref.scale.y) * cfg.chargeScaleLerp;
+        ref.scale.z +=
+          (baseScale.current.z - ref.scale.z) * cfg.chargeScaleLerp;
+      }
       return;
     }
 
     const elapsed = now - state.current.start;
     if (state.current.phase === "up") {
       const t = Math.min(1, elapsed / cfg.upMs);
-      const y = easeOutQuad(t) * cfg.height;
+      const y = easeOutQuad(t) * state.current.height;
       ref.position.y = baseY.current + y;
       // 스쿼시/스트레치
       ref.scale.y = baseScale.current.y * (1.0 + 0.08 * t);
@@ -94,7 +186,7 @@ export function useJump(
 
     if (state.current.phase === "down") {
       const t = Math.min(1, elapsed / cfg.downMs);
-      const y = (1 - easeInQuad(t)) * cfg.height;
+      const y = (1 - easeInQuad(t)) * state.current.height;
       ref.position.y = baseY.current + y;
       // 착지 직전 약간의 압축 준비
       ref.scale.y = baseScale.current.y * (1.08 - 0.18 * t);
