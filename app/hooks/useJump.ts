@@ -75,11 +75,18 @@ export function useJump(
 
   useEffect(() => {
     const startPress = () => {
+      // 점프 진행 중에는 차지 시작 금지
+      if (state.current.phase !== "idle") return;
       if (state.current.pressStartedAt == null) {
         state.current.pressStartedAt = performance.now();
       }
     };
     const endPress = () => {
+      // 점프 진행 중에는 차지 종료 처리/트리거 금지
+      if (state.current.phase !== "idle") {
+        state.current.pressStartedAt = null;
+        return;
+      }
       const now = performance.now();
       if (state.current.pressStartedAt == null) return;
       const heldMs = Math.min(
