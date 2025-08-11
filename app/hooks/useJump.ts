@@ -106,6 +106,8 @@ export function useJump(
     let spaceHeld = false;
     const onPointerDown = () => startPress();
     const onPointerUp = () => endPress();
+    const onTouchStart = () => startPress();
+    const onTouchEnd = () => endPress();
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.code !== "Space") return;
       if (spaceHeld) return;
@@ -119,11 +121,17 @@ export function useJump(
     };
     window.addEventListener("pointerdown", onPointerDown);
     window.addEventListener("pointerup", onPointerUp);
+    window.addEventListener("touchstart", onTouchStart, {
+      passive: true,
+    } as any);
+    window.addEventListener("touchend", onTouchEnd as any);
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("keyup", onKeyUp);
     return () => {
       window.removeEventListener("pointerdown", onPointerDown);
       window.removeEventListener("pointerup", onPointerUp);
+      window.removeEventListener("touchstart", onTouchStart as any);
+      window.removeEventListener("touchend", onTouchEnd as any);
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
     };
