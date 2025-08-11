@@ -12,11 +12,19 @@ export function ModelViewer({
   rotationSpeed = 0.5,
 }: ModelViewerProps) {
   return (
-    <div style={{ width: "100%", height: "100vh" }}>
+    <div
+      style={{
+        width: "100%",
+        height: "100vh",
+        touchAction: "none",
+        overscrollBehavior: "contain",
+      }}
+    >
       <Canvas
         camera={{ position: [0, 0, 15], fov: 75 }}
         style={{
           background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+          touchAction: "none",
         }}
       >
         <ambientLight intensity={0.5} />

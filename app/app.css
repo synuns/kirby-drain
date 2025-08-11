@@ -1,3 +1,9 @@
+html,
+body,
+#root {
+  overscroll-behavior: none;
+  touch-action: none;
+}
 @import "tailwindcss";
 
 @theme {
