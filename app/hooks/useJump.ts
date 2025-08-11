@@ -20,7 +20,7 @@ type UseJumpOptions = {
 };
 
 const DEFAULTS: Required<UseJumpOptions> = {
-  baseHeight: 1.8,
+  baseHeight: 2.4,
   upMs: 300,
   downMs: 300,
   recoverMs: 150,
@@ -28,7 +28,7 @@ const DEFAULTS: Required<UseJumpOptions> = {
   chargeKMs: 120,
   maxChargeMs: 1200,
   minFactor: 0.5,
-  maxFactor: 2.3,
+  maxFactor: 3.0,
   chargeSquashYMax: 0.3,
   chargeStretchXZMax: 0.14,
   chargeScaleLerp: 0.28,
