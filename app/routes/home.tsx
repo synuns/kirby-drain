@@ -1,5 +1,6 @@
 import type { Route } from "./+types/home";
 import { ModelViewer } from "../components/ModelViewer";
+import { WebGLGuard } from "~/components/WebGLGuard";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -12,5 +13,9 @@ export function meta({}: Route.MetaArgs) {
 }
 
 export default function Home() {
-  return <ModelViewer modelPath="/assets/models/kirby-drain.glb" />;
+  return (
+    <WebGLGuard>
+      <ModelViewer modelPath="/assets/models/kirby-drain.glb" />
+    </WebGLGuard>
+  );
 }
