@@ -21,11 +21,11 @@ type RotationDefaults = Required<
 >;
 
 const DEFAULTS: RotationDefaults = {
-  maxYawRad: 0.25,
-  maxPitchRad: 0.2,
-  damping: 0.08,
-  deadzone: 0.05,
-  smoothFactor: 0.2,
+  maxYawRad: 0.4, // 좌우 각도
+  maxPitchRad: 0.3, // 상하 각도
+  damping: 0.12, // 감쇠
+  deadzone: 0.03, // 데드존
+  smoothFactor: 0.25, // 스무딩
 };
 
 export function useModelRotation(options?: UseModelRotationOptions) {
