@@ -23,26 +23,28 @@ export type JumpConfig = {
   chargeStretchXZMax: number;
 };
 
-export function updateIdle(
-  ref: Group,
-  runtime: JumpRuntime,
-  base: JumpBase,
-  cfg: JumpConfig,
-  now: number,
-  pressStartedAt: number | null
-) {
+type UpdateIdleParams = {
+  ref: Group;
+  base: JumpBase;
+  cfg: JumpConfig;
+  pressStartedAt: number | null;
+  chargeProgress: number;
+};
+
+export function updateIdle({
+  ref,
+  base,
+  cfg,
+  pressStartedAt,
+  chargeProgress,
+}: UpdateIdleParams) {
   const charging = pressStartedAt != null;
   if (!charging) {
     base.baseScale = { x: ref.scale.x, y: ref.scale.y, z: ref.scale.z };
   }
   base.baseY = ref.position.y;
   if (charging) {
-    const heldMs = Math.min(
-      now - (pressStartedAt as number),
-      Number.MAX_SAFE_INTEGER
-    );
-    const denom = 1; // 시각 피드백만, 실제 맵핑은 외부에서 처리
-    const u = Math.max(0, Math.min(1, heldMs / (denom || 1)));
+    const u = Math.max(0, Math.min(1, chargeProgress));
     const yTarget = base.baseScale.y * (1 - cfg.chargeSquashYMax * u);
     const xzFactor = 1 + cfg.chargeStretchXZMax * u;
     const xTarget = base.baseScale.x * xzFactor;
@@ -57,13 +59,15 @@ export function updateIdle(
   }
 }
 
-export function updateUp(
-  ref: Group,
-  runtime: JumpRuntime,
-  base: JumpBase,
-  cfg: JumpConfig,
-  now: number
-) {
+type UpdatePhaseParams = {
+  ref: Group;
+  runtime: JumpRuntime;
+  base: JumpBase;
+  cfg: JumpConfig;
+  now: number;
+};
+
+export function updateUp({ ref, runtime, base, cfg, now }: UpdatePhaseParams) {
   const elapsed = now - runtime.start;
   const t = Math.min(1, elapsed / cfg.upMs);
   const y = easeOutQuad(t) * runtime.height;
@@ -85,13 +89,13 @@ export function updateUp(
   }
 }
 
-export function updateDown(
-  ref: Group,
-  runtime: JumpRuntime,
-  base: JumpBase,
-  cfg: JumpConfig,
-  now: number
-) {
+export function updateDown({
+  ref,
+  runtime,
+  base,
+  cfg,
+  now,
+}: UpdatePhaseParams) {
   const elapsed = now - runtime.start;
   const t = Math.min(1, elapsed / cfg.downMs);
   const y = (1 - easeInQuad(t)) * runtime.height;
@@ -114,13 +118,13 @@ export function updateDown(
   }
 }
 
-export function updateRecover(
-  ref: Group,
-  runtime: JumpRuntime,
-  base: JumpBase,
-  cfg: JumpConfig,
-  now: number
-) {
+export function updateRecover({
+  ref,
+  runtime,
+  base,
+  cfg,
+  now,
+}: UpdatePhaseParams) {
   const elapsed = now - runtime.start;
   const t = Math.min(1, elapsed / cfg.recoverMs);
   ref.position.y = base.baseY;

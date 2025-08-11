@@ -55,6 +55,7 @@ export function useJump(
   });
   const baseScale = useRef({ x: 1, y: 1, z: 1 });
   const baseY = useRef(0);
+  const needsScaleResetOnJumpRef = useRef(false);
 
   const trigger = useCallback(() => {
     const now = performance.now();
@@ -93,6 +94,7 @@ export function useJump(
         cfg.maxFactor
       );
       state.current.height = cfg.baseHeight * factor;
+      needsScaleResetOnJumpRef.current = true;
       trigger();
     },
   });
@@ -102,11 +104,10 @@ export function useJump(
     if (!ref) return;
     const now = performance.now();
     if (state.current.phase === "idle") {
-      updateIdle(
+      updateIdle({
         ref,
-        state.current,
-        { baseY: baseY.current, baseScale: baseScale.current },
-        {
+        base: { baseY: baseY.current, baseScale: baseScale.current },
+        cfg: {
           upMs: cfg.upMs,
           downMs: cfg.downMs,
           recoverMs: cfg.recoverMs,
@@ -114,20 +115,37 @@ export function useJump(
           chargeSquashYMax: cfg.chargeSquashYMax,
           chargeStretchXZMax: cfg.chargeStretchXZMax,
         },
-        now,
-        state.current.pressStartedAt
-      );
+        pressStartedAt: state.current.pressStartedAt,
+        chargeProgress: computeChargeProgress(
+          state.current.pressStartedAt,
+          now,
+          cfg.maxChargeMs,
+          cfg.chargeKMs
+        ),
+      });
       baseY.current = ref.position.y;
-      baseScale.current = { x: ref.scale.x, y: ref.scale.y, z: ref.scale.z };
+      const charging = state.current.pressStartedAt != null;
+      if (!charging) {
+        baseScale.current = { x: ref.scale.x, y: ref.scale.y, z: ref.scale.z };
+      }
       return;
     }
 
     if (state.current.phase === "up") {
-      updateUp(
+      if (needsScaleResetOnJumpRef.current) {
+        ref.scale.set(
+          baseScale.current.x,
+          baseScale.current.y,
+          baseScale.current.z
+        );
+        needsScaleResetOnJumpRef.current = false;
+      }
+      updateUp({
         ref,
-        state.current,
-        { baseY: baseY.current, baseScale: baseScale.current },
-        {
+        now,
+        runtime: state.current,
+        base: { baseY: baseY.current, baseScale: baseScale.current },
+        cfg: {
           upMs: cfg.upMs,
           downMs: cfg.downMs,
           recoverMs: cfg.recoverMs,
@@ -135,17 +153,17 @@ export function useJump(
           chargeSquashYMax: cfg.chargeSquashYMax,
           chargeStretchXZMax: cfg.chargeStretchXZMax,
         },
-        now
-      );
+      });
       return;
     }
 
     if (state.current.phase === "down") {
-      updateDown(
+      updateDown({
         ref,
-        state.current,
-        { baseY: baseY.current, baseScale: baseScale.current },
-        {
+        now,
+        runtime: state.current,
+        base: { baseY: baseY.current, baseScale: baseScale.current },
+        cfg: {
           upMs: cfg.upMs,
           downMs: cfg.downMs,
           recoverMs: cfg.recoverMs,
@@ -153,17 +171,17 @@ export function useJump(
           chargeSquashYMax: cfg.chargeSquashYMax,
           chargeStretchXZMax: cfg.chargeStretchXZMax,
         },
-        now
-      );
+      });
       return;
     }
 
     if (state.current.phase === "recover") {
-      updateRecover(
+      updateRecover({
         ref,
-        state.current,
-        { baseY: baseY.current, baseScale: baseScale.current },
-        {
+        now,
+        runtime: state.current,
+        base: { baseY: baseY.current, baseScale: baseScale.current },
+        cfg: {
           upMs: cfg.upMs,
           downMs: cfg.downMs,
           recoverMs: cfg.recoverMs,
@@ -171,8 +189,7 @@ export function useJump(
           chargeSquashYMax: cfg.chargeSquashYMax,
           chargeStretchXZMax: cfg.chargeStretchXZMax,
         },
-        now
-      );
+      });
     }
   });
 
