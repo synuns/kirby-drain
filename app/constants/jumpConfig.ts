@@ -1,0 +1,15 @@
+export const JUMP_DEFAULTS = {
+  baseHeight: 2.4,
+  upMs: 300,
+  downMs: 300,
+  recoverMs: 150,
+  cooldownMs: 600,
+  chargeKMs: 120,
+  maxChargeMs: 1200,
+  minFactor: 0.5,
+  maxFactor: 3.0,
+  chargeSquashYMax: 0.3,
+  chargeStretchXZMax: 0.14,
+  chargeScaleLerp: 0.28,
+  landingFxMs: 450,
+} as const;
