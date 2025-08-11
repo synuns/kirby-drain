@@ -1,16 +1,12 @@
 import { Canvas } from "@react-three/fiber";
-import { OrbitControls, Environment } from "@react-three/drei";
+import { Environment } from "@react-three/drei";
 import { GLBModel } from "./GLBModel";
 
 interface ModelViewerProps {
   modelPath: string;
-  rotationSpeed?: number;
 }
 
-export function ModelViewer({
-  modelPath,
-  rotationSpeed = 0.5,
-}: ModelViewerProps) {
+export function ModelViewer({ modelPath }: ModelViewerProps) {
   return (
     <div
       style={{
