@@ -2,8 +2,9 @@ import { useFrame } from "@react-three/fiber";
 import { useRef } from "react";
 import type { Group } from "three";
 import { useMouseFollow } from "./useMouseFollow";
+import { LOCK_ON, ROTATION_DEFAULTS } from "~/constants/rotationConfig";
 
-type UseModelRotationOptions = {
+export type UseModelRotationOptions = {
   suppress?: boolean | (() => boolean); // 회전 일시정지(점프 등 우선 동작 시)
   suppressRef?: React.MutableRefObject<boolean> | null; // 외부 ref로 제어
   maxYawRad?: number; // 좌우 최대 회전 각도
@@ -13,24 +14,9 @@ type UseModelRotationOptions = {
   smoothFactor?: number; // 0~1, 1에 가까울수록 입력 즉시 반영
 };
 
-type RotationDefaults = Required<
-  Pick<
-    UseModelRotationOptions,
-    "maxYawRad" | "maxPitchRad" | "damping" | "deadzone" | "smoothFactor"
-  >
->;
-
-const DEFAULTS: RotationDefaults = {
-  maxYawRad: 0.4, // 좌우 각도
-  maxPitchRad: 0.3, // 상하 각도
-  damping: 0.12, // 감쇠
-  deadzone: 0.03, // 데드존
-  smoothFactor: 0.25, // 스무딩
-};
-
 export function useModelRotation(options?: UseModelRotationOptions) {
   const { suppress = false, suppressRef = null, ...rest } = options ?? {};
-  const cfg = { ...DEFAULTS, ...rest };
+  const cfg = { ...ROTATION_DEFAULTS, ...rest };
   const modelRef = useRef<Group>(null);
   const mousePosition = useMouseFollow();
   const smoothed = useRef({ x: 0, y: 0 });
@@ -48,8 +34,10 @@ export function useModelRotation(options?: UseModelRotationOptions) {
     const inputX = mag < cfg.deadzone ? 0 : smoothed.current.x;
     const inputY = mag < cfg.deadzone ? 0 : smoothed.current.y;
 
-    const targetRotationY = inputX * cfg.maxYawRad;
-    const targetRotationX = -inputY * cfg.maxPitchRad;
+    const near = mag <= LOCK_ON.radius;
+    const mult = near ? LOCK_ON.multiplier : 1;
+    const targetRotationY = inputX * cfg.maxYawRad * mult;
+    const targetRotationX = -inputY * cfg.maxPitchRad * mult;
 
     const suppressed =
       (typeof suppress === "function" ? suppress() : suppress) ||
