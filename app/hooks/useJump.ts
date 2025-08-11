@@ -17,6 +17,7 @@ type UseJumpOptions = {
   chargeSquashYMax?: number; // y축 최대 압축 비율(예: 0.15 → 15% 줄어듦)
   chargeStretchXZMax?: number; // xz축 최대 신장 비율(예: 0.08 → 8% 늘어남)
   chargeScaleLerp?: number; // 차지 스케일 보간 정도(0~1)
+  landingFxMs?: number;
 };
 
 const DEFAULTS: Required<UseJumpOptions> = {
@@ -32,6 +33,7 @@ const DEFAULTS: Required<UseJumpOptions> = {
   chargeSquashYMax: 0.3,
   chargeStretchXZMax: 0.14,
   chargeScaleLerp: 0.28,
+  landingFxMs: 450,
 };
 
 function easeOutQuad(t: number) {
@@ -53,12 +55,14 @@ export function useJump(
     cooldownUntil: number;
     height: number;
     pressStartedAt: number | null;
+    lastLandingAt: number | null;
   }>({
     phase: "idle",
     start: 0,
     cooldownUntil: 0,
     height: cfg.baseHeight,
     pressStartedAt: null,
+    lastLandingAt: null,
   });
   const baseScale = useRef({ x: 1, y: 1, z: 1 });
   const baseY = useRef(0);
@@ -210,6 +214,7 @@ export function useJump(
       if (t >= 1) {
         state.current.phase = "recover";
         state.current.start = now;
+        state.current.lastLandingAt = now;
       }
       return;
     }
@@ -227,6 +232,37 @@ export function useJump(
   });
 
   const isJumping = () => state.current.phase !== "idle";
+  const getJumpHeight = () => state.current.height;
+  const getHeightRange = () => ({
+    min: cfg.baseHeight * cfg.minFactor,
+    max: cfg.baseHeight * cfg.maxFactor,
+  });
+  const getChargeProgress = () => {
+    if (state.current.pressStartedAt == null) return 0;
+    const now = performance.now();
+    const heldMs = Math.min(
+      cfg.maxChargeMs,
+      now - state.current.pressStartedAt
+    );
+    const denom = Math.log1p(cfg.maxChargeMs / cfg.chargeKMs);
+    const u = denom > 0 ? Math.log1p(heldMs / cfg.chargeKMs) / denom : 0;
+    return Math.max(0, Math.min(1, u));
+  };
+  const getLandingProgress = () => {
+    if (state.current.lastLandingAt == null) return 0;
+    const dt = performance.now() - state.current.lastLandingAt;
+    if (dt <= 0) return 0;
+    const p = Math.min(1, dt / cfg.landingFxMs);
+    if (p >= 1) state.current.lastLandingAt = null;
+    return p;
+  };
 
-  return { trigger, isJumping } as const;
+  return {
+    trigger,
+    isJumping,
+    getJumpHeight,
+    getHeightRange,
+    getChargeProgress,
+    getLandingProgress,
+  } as const;
 }
