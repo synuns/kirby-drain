@@ -29,5 +29,5 @@ export function useMouseFollow() {
   }, []);
 
   // 마우스가 정지 상태일 땐 약화된 반응을 유도하기 위해 값을 축소
-  return { x: mousePosition.x, y: mousePosition.y };
+  return { x: mousePosition.x, y: mousePosition.y, isIdle };
 }
