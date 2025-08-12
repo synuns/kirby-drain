@@ -3,6 +3,8 @@ import { useRef } from "react";
 import type { Group } from "three";
 import { useMouseFollow } from "./useMouseFollow";
 import { LOCK_ON, ROTATION_DEFAULTS } from "~/constants/rotationConfig";
+import { useAgent } from "./useAgent";
+import { useDeviceTilt } from "./useDeviceTilt";
 
 export type UseModelRotationOptions = {
   suppress?: boolean | (() => boolean); // 회전 일시정지(점프 등 우선 동작 시)
@@ -18,17 +20,23 @@ export function useModelRotation(options?: UseModelRotationOptions) {
   const { suppress = false, suppressRef = null, ...rest } = options ?? {};
   const cfg = { ...ROTATION_DEFAULTS, ...rest };
   const modelRef = useRef<Group>(null);
+  const agent = useAgent();
   const mousePosition = useMouseFollow();
+  const deviceTilt = useDeviceTilt({
+    smoothFactor: rest.smoothFactor ?? ROTATION_DEFAULTS.smoothFactor,
+  });
   const smoothed = useRef({ x: 0, y: 0 });
 
   useFrame((state, delta) => {
     const ref = modelRef.current;
     if (!ref) return;
 
-    smoothed.current.x +=
-      (mousePosition.x - smoothed.current.x) * cfg.smoothFactor;
-    smoothed.current.y +=
-      (mousePosition.y - smoothed.current.y) * cfg.smoothFactor;
+    // 입력 소스 분기: 모바일은 기울기, 데스크탑은 마우스
+    const sourceX = agent.isMobile ? deviceTilt.x : mousePosition.x;
+    const sourceY = agent.isMobile ? deviceTilt.y : mousePosition.y;
+
+    smoothed.current.x += (sourceX - smoothed.current.x) * cfg.smoothFactor;
+    smoothed.current.y += (sourceY - smoothed.current.y) * cfg.smoothFactor;
 
     const mag = Math.hypot(smoothed.current.x, smoothed.current.y);
     const inputX = mag < cfg.deadzone ? 0 : smoothed.current.x;
