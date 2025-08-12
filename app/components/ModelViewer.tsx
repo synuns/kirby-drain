@@ -21,6 +21,10 @@ export function ModelViewer({ modelPath }: ModelViewerProps) {
         style={{
           background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
           touchAction: "none",
+          WebkitUserSelect: "none",
+          userSelect: "none",
+          WebkitTapHighlightColor: "transparent",
+          WebkitTouchCallout: "none",
         }}
       >
         <ambientLight intensity={0.5} />
