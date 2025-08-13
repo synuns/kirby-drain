@@ -2,6 +2,7 @@ import type { Route } from "./+types/home";
 import { ModelViewer } from "../components/ModelViewer";
 import { MotionPermissionGate } from "../components/MotionPermissionGate";
 import { WebGLGuard } from "~/components/WebGLGuard";
+import { SplashScreen } from "~/components/SplashScreen";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -30,10 +31,12 @@ export function meta({}: Route.MetaArgs) {
 
 export default function Home() {
   return (
-    <WebGLGuard>
-      <MotionPermissionGate>
-        <ModelViewer modelPath="/assets/models/kirby-drain.glb" />
-      </MotionPermissionGate>
-    </WebGLGuard>
+    <SplashScreen>
+      <WebGLGuard>
+        <MotionPermissionGate>
+          <ModelViewer modelPath="/assets/models/kirby-drain.glb" />
+        </MotionPermissionGate>
+      </WebGLGuard>
+    </SplashScreen>
   );
 }
