@@ -18,11 +18,13 @@ export type CountConfig = {
   threshold?: number; // u가 이 값 미만이면 0으로 억제
 };
 
+import { CHARGED_ACTION_THRESHOLD } from "~/constants/chargeThreshold";
+
 export const DEFAULT_BURST_CONFIG: BurstConfig = {
   minBurst: 4,
   maxBurst: 28,
   alpha: 3.0,
-  threshold: 0.9,
+  threshold: CHARGED_ACTION_THRESHOLD,
 };
 
 export const DEFAULT_COUNT_CONFIG: CountConfig = {
@@ -30,7 +32,7 @@ export const DEFAULT_COUNT_CONFIG: CountConfig = {
   maxCount: 48,
   burstHeadroomRatio: 1.5,
   alpha: 2.6,
-  threshold: 0.85,
+  threshold: CHARGED_ACTION_THRESHOLD,
 };
 
 export function clamp01(value: number): number {
