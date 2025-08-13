@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { LS_KEY } from "~/constants/localStorage";
 
 export type MotionPermissionRequestResult =
   | { ok: true }
@@ -17,11 +18,6 @@ export type MotionPermissionState = {
   requestPermission: () => Promise<MotionPermissionRequestResult>;
 };
 
-/**
- * iOS 13+ 사파리/웹뷰의 모션/오리엔테이션 권한을 요청/관리하는 훅.
- * - 사용자 제스처 안에서 `requestPermission()`을 호출해야 함
- * - 성공 시 `hasPermission`이 true로 전환됨
- */
 // 모듈 스코프 전역 상태(싱글톤)
 type InternalEnv = {
   isSupported: boolean;
@@ -49,9 +45,6 @@ function initOnce() {
   internal.initialized = true;
 
   if (typeof window === "undefined") {
-    internal.env = { isSupported: false };
-    internal.needsPermission = false;
-    internal.hasPermission = false;
     return;
   }
 
@@ -60,20 +53,25 @@ function initOnce() {
     "ondevicemotion" in window || "ondeviceorientation" in window;
 
   const motionRequestFn =
-    typeof w.DeviceMotionEvent !== "undefined" &&
-    typeof w.DeviceMotionEvent.requestPermission === "function"
+    typeof w.DeviceMotionEvent?.requestPermission === "function"
       ? (w.DeviceMotionEvent.requestPermission as () => Promise<string>)
       : undefined;
 
   const orientationRequestFn =
-    typeof w.DeviceOrientationEvent !== "undefined" &&
-    typeof w.DeviceOrientationEvent.requestPermission === "function"
+    typeof w.DeviceOrientationEvent?.requestPermission === "function"
       ? (w.DeviceOrientationEvent.requestPermission as () => Promise<string>)
       : undefined;
 
   internal.env = { isSupported, motionRequestFn, orientationRequestFn };
   internal.needsPermission = Boolean(motionRequestFn || orientationRequestFn);
-  internal.hasPermission = internal.needsPermission ? false : isSupported;
+
+  if (internal.needsPermission) {
+    // localStorage에 저장된 값이 있으면 초기 권한 상태로 인정
+    internal.hasPermission = localStorage.getItem(LS_KEY) === "true";
+  } else {
+    // 권한 요청이 필요 없는 환경에서는 지원 여부가 곧 권한 상태
+    internal.hasPermission = isSupported;
+  }
 }
 
 function broadcast(has: boolean) {
@@ -88,59 +86,57 @@ export function useMotionPermission(): MotionPermissionState {
   );
 
   // 구독/해제
-  const subRef = useRef<((has: boolean) => void) | null>(null);
   useEffect(() => {
     const handler = (has: boolean) => setHasPermission(has);
-    subRef.current = handler;
     subscribers.add(handler);
     return () => {
-      subscribers.delete(subRef.current!);
-      subRef.current = null;
+      subscribers.delete(handler);
     };
   }, []);
 
-  const needsPermission = internal.needsPermission;
-  const canRequest = needsPermission;
+  const canRequest = internal.needsPermission;
 
   const requestPermission =
     useCallback(async (): Promise<MotionPermissionRequestResult> => {
       try {
-        initOnce();
         const env = internal.env;
 
         if (!internal.needsPermission) {
-          internal.hasPermission = env.isSupported;
-          broadcast(internal.hasPermission);
+          // 이 환경에서는 hasPermission이 이미 true로 설정되어 있음
           return { ok: true };
         }
 
         const results: string[] = [];
+        const requestFns = [
+          env.motionRequestFn,
+          env.orientationRequestFn,
+        ].filter(Boolean);
 
-        if (env.motionRequestFn) {
+        for (const requestFn of requestFns) {
           try {
-            const r = await env.motionRequestFn();
-            results.push(r);
-          } catch {
-            results.push("denied");
-          }
-        }
-
-        if (env.orientationRequestFn) {
-          try {
-            const r = await env.orientationRequestFn();
-            results.push(r);
+            const result = await requestFn!();
+            results.push(result);
           } catch {
             results.push("denied");
           }
         }
 
         const granted = results.some((r) => r === "granted");
-        internal.hasPermission = granted ? true : false;
-        broadcast(internal.hasPermission);
-        if (granted) return { ok: true };
-        return { ok: false, reason: "permission_denied" };
+
+        if (granted) {
+          internal.hasPermission = true;
+          localStorage.setItem(LS_KEY, "true");
+          broadcast(true);
+          return { ok: true };
+        } else {
+          internal.hasPermission = false;
+          localStorage.removeItem(LS_KEY); // 거부 시 상태 제거
+          broadcast(false);
+          return { ok: false, reason: "permission_denied" };
+        }
       } catch {
         internal.hasPermission = false;
+        localStorage.removeItem(LS_KEY); // 에러 발생 시 상태 제거
         broadcast(false);
         return { ok: false, reason: "unexpected_error" };
       }
@@ -148,7 +144,7 @@ export function useMotionPermission(): MotionPermissionState {
 
   return {
     isSupported: internal.env.isSupported,
-    needsPermission,
+    needsPermission: internal.needsPermission,
     hasPermission,
     canRequest,
     requestPermission,
