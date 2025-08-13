@@ -1,6 +1,7 @@
 import { useFrame, useLoader } from "@react-three/fiber";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { useModelRotation } from "~/hooks/useModelRotation";
+import { useChargedSpin } from "~/hooks/useChargedSpin";
 import { useJump } from "~/hooks/useJump";
 import { useProximityBounce } from "~/hooks/useProximityBounce";
 import { Sparks } from "./Sparks";
@@ -17,15 +18,26 @@ interface GLBModelProps {
 
 export function GLBModel({ modelPath }: GLBModelProps) {
   const gltf = useLoader(GLTFLoader, modelPath);
-  const modelRef = useModelRotation();
+  const rotationSuppressRef = useRef(false);
+  const modelRef = useModelRotation({ suppressRef: rotationSuppressRef });
   const {
     getChargeProgress,
     getLandingProgress,
     getJumpHeight,
     getHeightRange,
+    isJumping,
   } = useJump(modelRef);
+
+  const spin = useChargedSpin({
+    groupRef: modelRef,
+    getChargeProgress,
+    isJumping,
+  });
+
   useHaptics({ getChargeProgress, getLandingProgress });
+
   const { getAndReset } = useApexTrigger(modelRef);
+
   useProximityBounce(modelRef, {
     nearRadius: 0.28,
     maxForward: 0.55,
@@ -60,6 +72,11 @@ export function GLBModel({ modelPath }: GLBModelProps) {
     rippleLocalYRef.current = minWorldY - parentWorldY;
 
     rippleComputedRef.current = true;
+  });
+
+  // 스핀 중에는 입력 기반 모델 회전을 정지
+  useFrame(() => {
+    rotationSuppressRef.current = spin.isActive();
   });
 
   const getBurst = useCallback(() => {
