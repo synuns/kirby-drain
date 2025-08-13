@@ -4,7 +4,7 @@ import type { Group } from "three";
 import { useMouseFollow } from "./useMouseFollow";
 import { LOCK_ON, ROTATION_DEFAULTS } from "~/constants/rotationConfig";
 import { useAgent } from "./useAgent";
-import { useDeviceTilt } from "./useDeviceTilt";
+import { useTiltMapping } from "./useTiltMapping";
 
 export type UseModelRotationOptions = {
   suppress?: boolean | (() => boolean); // 회전 일시정지(점프 등 우선 동작 시)
@@ -22,8 +22,10 @@ export function useModelRotation(options?: UseModelRotationOptions) {
   const modelRef = useRef<Group>(null);
   const agent = useAgent();
   const mousePosition = useMouseFollow();
-  const deviceTilt = useDeviceTilt({
-    smoothFactor: rest.smoothFactor ?? ROTATION_DEFAULTS.smoothFactor,
+  const deviceTilt = useTiltMapping({
+    xGain: 1.8,
+    yGain: 2.2,
+    invertY: true,
   });
   const smoothed = useRef({ x: 0, y: 0 });
 
@@ -44,6 +46,7 @@ export function useModelRotation(options?: UseModelRotationOptions) {
 
     const near = mag <= LOCK_ON.radius;
     const mult = near ? LOCK_ON.multiplier : 1;
+
     const targetRotationY = inputX * cfg.maxYawRad * mult;
     const targetRotationX = -inputY * cfg.maxPitchRad * mult;
 
