@@ -30,6 +30,7 @@ type InternalState = {
   needsPermission: boolean;
   hasPermission: boolean;
   initialized: boolean;
+  verificationScheduled?: boolean;
 };
 
 const subscribers = new Set<(has: boolean) => void>();
@@ -141,6 +142,66 @@ export function useMotionPermission(): MotionPermissionState {
         return { ok: false, reason: "unexpected_error" };
       }
     }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!internal.needsPermission) return;
+    if (!internal.hasPermission) return; // 이미 false면 게이트가 뜸
+    if (internal.verificationScheduled) return; // 중복 방지
+
+    internal.verificationScheduled = true;
+
+    let resolved = false;
+    const VERIFY_TIMEOUT_MS = 800;
+
+    const handleGrant = () => {
+      if (resolved) return;
+      resolved = true;
+      cleanup();
+      // 이벤트가 왔으므로 그대로 유지
+      internal.hasPermission = true;
+      localStorage.setItem(LS_KEY, "true");
+      broadcast(true);
+    };
+
+    const onOrientation = () => handleGrant();
+    const onMotion = () => handleGrant();
+
+    const cleanup = () => {
+      window.removeEventListener("deviceorientation", onOrientation as any);
+      window.removeEventListener("devicemotion", onMotion as any);
+      clearTimeout(timeoutId);
+    };
+
+    window.addEventListener(
+      "deviceorientation",
+      onOrientation as any,
+      {
+        passive: true,
+        once: true,
+      } as any
+    );
+    window.addEventListener(
+      "devicemotion",
+      onMotion as any,
+      {
+        passive: true,
+        once: true,
+      } as any
+    );
+
+    const timeoutId = window.setTimeout(() => {
+      if (resolved) return;
+      resolved = true;
+      cleanup();
+      // 이벤트가 오지 않았으므로 권한이 유실되었다고 간주
+      internal.hasPermission = false;
+      localStorage.removeItem(LS_KEY);
+      broadcast(false);
+    }, VERIFY_TIMEOUT_MS);
+
+    return cleanup;
+  }, []);
 
   return {
     isSupported: internal.env.isSupported,
