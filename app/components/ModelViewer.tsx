@@ -1,12 +1,18 @@
 import { Canvas } from "@react-three/fiber";
 import { Environment } from "@react-three/drei";
 import { GLBModel } from "./GLBModel";
+import { useState } from "react";
+import { InitialDrop } from "./InitialDrop";
 
 interface ModelViewerProps {
   modelPath: string;
 }
 
 export function ModelViewer({ modelPath }: ModelViewerProps) {
+  const [initialPosition, setInitialPosition] = useState<
+    [number, number, number] | null
+  >(null);
+
   return (
     <div
       style={{
@@ -34,8 +40,20 @@ export function ModelViewer({ modelPath }: ModelViewerProps) {
         <Environment preset="sunset" />
 
         {/* <ShiningStars /> */}
-
-        <GLBModel modelPath={modelPath} />
+        {!initialPosition && (
+          <InitialDrop
+            modelPath={modelPath}
+            startY={8}
+            radius={0.9}
+            gravity={[0, -20, 0]}
+            onComplete={(pos) => setInitialPosition([pos[0], pos[1], pos[2]])}
+          />
+        )}
+        {initialPosition && (
+          <group position={initialPosition}>
+            <GLBModel modelPath={modelPath} />
+          </group>
+        )}
       </Canvas>
     </div>
   );
