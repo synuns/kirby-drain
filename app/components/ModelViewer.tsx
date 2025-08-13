@@ -1,6 +1,7 @@
 import { Canvas } from "@react-three/fiber";
 import { Environment } from "@react-three/drei";
 import { GLBModel } from "./GLBModel";
+import { ShiningStars } from "./ShiningStars";
 
 interface ModelViewerProps {
   modelPath: string;
@@ -32,6 +33,8 @@ export function ModelViewer({ modelPath }: ModelViewerProps) {
         <pointLight position={[-10, -10, -5]} intensity={0.5} />
 
         <Environment preset="sunset" />
+
+        <ShiningStars />
 
         <GLBModel modelPath={modelPath} />
       </Canvas>
