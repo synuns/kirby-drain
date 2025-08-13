@@ -9,10 +9,10 @@ type RotationDefaults = Required<
 
 export const ROTATION_DEFAULTS: RotationDefaults = {
   maxYawRad: 0.4, // 좌우 각도
-  maxPitchRad: 0.3, // 상하 각도
-  damping: 0.12, // 감쇠
-  deadzone: 0.03, // 데드존
-  smoothFactor: 0.25, // 스무딩
+  maxPitchRad: 0.9, // 상하 각도
+  damping: 0.18, // 감쇠
+  deadzone: 0.02, // 데드존
+  smoothFactor: 0.3, // 스무딩
 };
 
 export const LOCK_ON = {
