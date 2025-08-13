@@ -20,10 +20,10 @@ export function MotionPermissionGate({ children }: PropsWithChildren) {
       >
         <div style={{ padding: 16, textAlign: "center" }}>
           <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>
-            자이로 센서를 지원하지 않는 환경입니다.
+            Motion sensors are not supported in this environment.
           </div>
           <div style={{ opacity: 0.8, fontSize: 13 }}>
-            일부 기능이 제한될 수 있습니다.
+            Some features may be limited.
           </div>
         </div>
       </div>
@@ -52,10 +52,10 @@ export function MotionPermissionGate({ children }: PropsWithChildren) {
       >
         <div style={{ textAlign: "center" }}>
           <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>
-            기기의 자이로 센서 권한이 필요합니다
+            Motion sensor permission is required
           </div>
           <div style={{ fontSize: 14, opacity: 0.9, marginBottom: 16 }}>
-            버튼을 눌러 기기 권한을 허용해 주세요.
+            Tap the button to grant access for the best experience.
           </div>
           <button
             onClick={() => requestPermission()}
@@ -68,7 +68,7 @@ export function MotionPermissionGate({ children }: PropsWithChildren) {
               fontSize: 16,
             }}
           >
-            센서 권한 허용
+            Allow Motion Access
           </button>
         </div>
       </div>

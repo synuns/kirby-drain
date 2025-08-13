@@ -31,12 +31,12 @@ function DefaultFallback() {
         }}
       >
         <h2 style={{ fontWeight: 700, fontSize: 20, marginBottom: 8 }}>
-          WebGL이 비활성화되어 있어요
+          WebGL is disabled
         </h2>
         <p style={{ lineHeight: 1.6, fontSize: 14 }}>
-          이 페이지는 3D 렌더링을 위해 WebGL을 사용합니다. 브라우저 설정, 보안
-          정책, 확장 프로그램 또는 하드웨어 가속 비활성화로 인해 WebGL
-          컨텍스트를 만들 수 없습니다.
+          This page uses WebGL for 3D rendering. Your browser settings, security
+          policy, extensions, or disabled hardware acceleration might prevent
+          creating a WebGL context.
         </p>
         <ul
           style={{
@@ -47,10 +47,10 @@ function DefaultFallback() {
             listStyle: "disc",
           }}
         >
-          <li>브라우저 설정에서 하드웨어 가속을 켠 뒤 다시 시도</li>
-          <li>시크릿 모드 또는 확장 프로그램을 비활성화하고 새로고침</li>
-          <li>다른 브라우저(Chrome, Edge, Firefox, Safari)에서 시도</li>
-          <li>GPU 드라이버 업데이트</li>
+          <li>Enable hardware acceleration in your browser and retry</li>
+          <li>Disable extensions or try a non-incognito window</li>
+          <li>Try another browser (Chrome, Edge, Firefox, Safari)</li>
+          <li>Update your GPU drivers</li>
         </ul>
       </div>
     </div>
@@ -60,7 +60,7 @@ function DefaultFallback() {
 export function WebGLGuard({ children, fallback }: WebGLGuardProps) {
   const { checked, supported } = useWebGLSupport();
 
-  // 초기 SSR/CSR 전환 시 깜박임을 줄이기 위해 검사 전에는 본문을 먼저 렌더링
+  // Render children before the check to reduce SSR/CSR flicker on initial mount
   if (!checked) return <>{children}</>;
   if (!supported) return <>{fallback ?? <DefaultFallback />}</>;
   return <>{children}</>;
