@@ -15,8 +15,6 @@ interface GLBModelProps {
   modelPath: string;
 }
 
-const initialRotation = [0, Math.PI / 10, 0] as const;
-
 export function GLBModel({ modelPath }: GLBModelProps) {
   const gltf = useLoader(GLTFLoader, modelPath);
   const modelRef = useModelRotation();
@@ -78,7 +76,7 @@ export function GLBModel({ modelPath }: GLBModelProps) {
   }, [getJumpHeight, getHeightRange, getBurst]);
 
   return (
-    <group ref={modelRef} rotation={initialRotation}>
+    <group ref={modelRef}>
       <UnscaledGroup parentRef={modelRef}>
         <Sparks
           getApexTrigger={getAndReset}
