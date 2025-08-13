@@ -38,7 +38,7 @@ type JumpState = {
   lastLandingAt: number | null;
 };
 
-const DEFAULTS: Required<UseJumpOptions> = { ...JUMP_DEFAULTS } as any;
+const DEFAULTS: Required<UseJumpOptions> = { ...JUMP_DEFAULTS };
 
 export function useJump(
   groupRef: React.RefObject<Group | null>,
@@ -95,6 +95,7 @@ export function useJump(
       );
       state.current.height = cfg.baseHeight * factor;
       needsScaleResetOnJumpRef.current = true;
+
       trigger();
     },
   });
@@ -140,6 +141,7 @@ export function useJump(
         );
         needsScaleResetOnJumpRef.current = false;
       }
+
       updateUp({
         ref,
         now,
