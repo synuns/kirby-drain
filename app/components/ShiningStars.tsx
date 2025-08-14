@@ -1,11 +1,12 @@
 import { useLoader, useFrame } from "@react-three/fiber";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { Group, MathUtils, Vector3 } from "three";
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, useState, RefObject } from "react";
 import type { ShiningStarsConfig } from "~/constants/shiningStarConfig";
 import { SHINING_STARS_DEFAULT } from "~/constants/shiningStarConfig";
 
 type StarInstance = {
+  id: number;
   position: [number, number, number];
   scale: number;
   rotationSpeed: number;
@@ -36,13 +37,15 @@ function generateStars(cfg: ShiningStarsConfig) {
       cfg.rotationSpeedRange[1],
       rand()
     );
-    stars.push({ position: [x, y, z], scale, rotationSpeed });
+    stars.push({ id: i, position: [x, y, z], scale, rotationSpeed });
   }
   return stars;
 }
 
 export type ShiningStarsProps = Partial<ShiningStarsConfig> & {
   center?: [number, number, number];
+  isSucking: boolean;
+  kirbyRef: RefObject<Group>;
 };
 
 export function ShiningStars(props: ShiningStarsProps) {
@@ -50,34 +53,54 @@ export function ShiningStars(props: ShiningStarsProps) {
   const gltf = useLoader(GLTFLoader, cfg.modelPath);
   const groupRef = useRef<Group>(null);
 
-  const stars = useMemo(
-    () => generateStars(cfg),
-    [
-      cfg.count,
-      cfg.seed,
-      cfg.radiusRange[0],
-      cfg.radiusRange[1],
-      cfg.yRange[0],
-      cfg.yRange[1],
-      cfg.zRange[0],
-      cfg.zRange[1],
-      cfg.scaleRange[0],
-      cfg.scaleRange[1],
-      cfg.rotationSpeedRange[0],
-      cfg.rotationSpeedRange[1],
-    ]
-  );
+  const [stars, setStars] = useState(() => generateStars(cfg));
 
   const center = useMemo(() => {
     const c = props.center ?? [0, 0, 0];
     return new Vector3(c[0], c[1], c[2]);
   }, [props.center]);
 
-  useFrame((_, dt) => {
+  useFrame((state, dt) => {
     const group = groupRef.current;
-    if (!group) return;
+    const kirby = props.kirbyRef.current;
+    if (!group || !kirby) return;
+
+    const capturedStarIds: number[] = [];
+
+    if (props.isSucking) {
+      const kirbyPos = kirby.getWorldPosition(new Vector3());
+      const INHALE_RADIUS = 8;
+      const CAPTURE_DISTANCE = 0.5;
+
+      group.children.forEach((child, idx) => {
+        const starData = stars[idx];
+        if (!starData) return;
+
+        const starPos = child.getWorldPosition(new Vector3());
+        const distance = starPos.distanceTo(kirbyPos);
+
+        if (distance < INHALE_RADIUS) {
+          const direction = kirbyPos.clone().sub(starPos).normalize();
+          const speed = Math.max(0, (INHALE_RADIUS - distance)) * 2;
+          child.position.add(direction.multiplyScalar(speed * dt));
+
+          if (distance < CAPTURE_DISTANCE) {
+            capturedStarIds.push(starData.id);
+          }
+        }
+      });
+    }
+
+    if (capturedStarIds.length > 0) {
+      setStars((prevStars) =>
+        prevStars.filter((s) => !capturedStarIds.includes(s.id))
+      );
+    }
+
+    // Default rotation
     group.children.forEach((child, idx) => {
       const s = stars[idx];
+      if (!s) return;
       child.rotation.y += s.rotationSpeed * dt;
       child.rotation.x += s.rotationSpeed * 0.5 * dt;
     });
@@ -88,8 +111,8 @@ export function ShiningStars(props: ShiningStarsProps) {
       ref={groupRef}
       position={center.toArray() as [number, number, number]}
     >
-      {stars.map((s, i) => (
-        <group key={i} position={s.position} scale={s.scale}>
+      {stars.map((s) => (
+        <group key={s.id} position={s.position} scale={s.scale}>
           <primitive object={gltf.scene.clone()} />
         </group>
       ))}

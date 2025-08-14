@@ -1,8 +1,11 @@
 import { Canvas } from "@react-three/fiber";
 import { Environment } from "@react-three/drei";
-import { GLBModel } from "./GLBModel";
-import { useState } from "react";
+import { GLBModel, GLBModelProps } from "./GLBModel";
+import { useRef, useState } from "react";
 import { InitialDrop } from "./InitialDrop";
+import { ShiningStars } from "./ShiningStars";
+import { useInhaleInput } from "~/hooks/useInhaleInput";
+import { Group } from "three";
 
 interface ModelViewerProps {
   modelPath: string;
@@ -12,6 +15,8 @@ export function ModelViewer({ modelPath }: ModelViewerProps) {
   const [initialPosition, setInitialPosition] = useState<
     [number, number, number] | null
   >(null);
+  const isSucking = useInhaleInput();
+  const kirbyRef = useRef<Group>(null);
 
   return (
     <div
@@ -39,7 +44,11 @@ export function ModelViewer({ modelPath }: ModelViewerProps) {
 
         <Environment preset="sunset" />
 
-        {/* <ShiningStars /> */}
+        <ShiningStars
+          modelPath="/assets/models/shining-star.glb"
+          isSucking={isSucking}
+          kirbyRef={kirbyRef}
+        />
         {!initialPosition && (
           <InitialDrop
             modelPath={modelPath}
@@ -50,8 +59,8 @@ export function ModelViewer({ modelPath }: ModelViewerProps) {
           />
         )}
         {initialPosition && (
-          <group position={initialPosition}>
-            <GLBModel modelPath={modelPath} />
+          <group position={initialPosition} ref={kirbyRef}>
+            <GLBModel modelPath={modelPath} isSucking={isSucking} />
           </group>
         )}
       </Canvas>
