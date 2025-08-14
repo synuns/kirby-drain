@@ -9,14 +9,17 @@ import { useApexTrigger } from "~/hooks/useApexTrigger";
 import { useHaptics } from "~/hooks/useHaptics";
 import { UnscaledGroup } from "./UnscaledGroup";
 import { Box3, Vector3 } from "three";
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { computeBurst, computeCount } from "~/utils/sparksScaling";
+import { useAudio } from "~/hooks/useAudio";
+import { useInhaleInput } from "~/hooks/useInhaleInput";
 
-interface GLBModelProps {
+export interface GLBModelProps {
   modelPath: string;
+  isSucking: boolean;
 }
 
-export function GLBModel({ modelPath }: GLBModelProps) {
+export function GLBModel({ modelPath, isSucking }: GLBModelProps) {
   const gltf = useLoader(GLTFLoader, modelPath);
   const rotationSuppressRef = useRef(false);
   const modelRef = useModelRotation({ suppressRef: rotationSuppressRef });
@@ -35,6 +38,30 @@ export function GLBModel({ modelPath }: GLBModelProps) {
   });
 
   useHaptics({ getChargeProgress, getLandingProgress });
+
+  const playJumpSound = useAudio("/assets/sounds/jump.mp3", 0.5);
+  const playLandSound = useAudio("/assets/sounds/land.mp3", 0.5);
+  const playInhaleSound = useAudio("/assets/sounds/inhale.mp3", 0.5);
+
+  const wasJumping = useRef(false);
+  const wasLanding = useRef(false);
+  const wasSucking = useRef(false);
+
+  useEffect(() => {
+    const landingProgress = getLandingProgress();
+    if (isJumping && !wasJumping.current) {
+      playJumpSound();
+    }
+    if (landingProgress > 0 && !wasLanding.current) {
+      playLandSound();
+    }
+    if (isSucking && !wasSucking.current) {
+      playInhaleSound();
+    }
+    wasJumping.current = isJumping;
+    wasLanding.current = landingProgress > 0;
+    wasSucking.current = isSucking;
+  }, [isJumping, getLandingProgress, playJumpSound, playLandSound, isSucking, playInhaleSound]);
 
   const { getAndReset } = useApexTrigger(modelRef);
 
@@ -77,6 +104,21 @@ export function GLBModel({ modelPath }: GLBModelProps) {
   // 스핀 중에는 입력 기반 모델 회전을 정지
   useFrame(() => {
     rotationSuppressRef.current = spin.isActive();
+  });
+
+  // 들이마시기 애니메이션
+  useFrame(({ clock }) => {
+    const model = modelRef.current;
+    if (!model) return;
+
+    if (isSucking) {
+      const t = clock.getElapsedTime();
+      const scale = 1 + Math.sin(t * 10) * 0.1;
+      model.scale.set(scale, scale, scale);
+    } else {
+      // Reset scale when not sucking
+      model.scale.lerp({ x: 1, y: 1, z: 1 } as Vector3, 0.1);
+    }
   });
 
   const getBurst = useCallback(() => {
